@@ -27,7 +27,7 @@ import {
   transformToTextrue,
 } from "./util";
 
-let isControlUpdated = false;
+const WHITE = new Color(0xffffff);
 
 /* Common Global Variable */
 // const gui = new dat.GUI({ width: 340 });
@@ -65,7 +65,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 const particleScene = new THREE.Scene();
 const aspectRatio = sizes.width / sizes.height;
 const cameraSize = 0.5;
-const camera = new THREE.OrthographicCamera(
+const viewPortCamera = new THREE.OrthographicCamera(
   (-cameraSize * sizes.width) / sizes.height,
   (cameraSize * sizes.width) / sizes.height,
   cameraSize,
@@ -74,12 +74,22 @@ const camera = new THREE.OrthographicCamera(
   10
 );
 
-camera.position.set(0, 0, 0.1);
-camera.lookAt(new THREE.Vector3(0, 0, 0));
-particleScene.add(camera);
+const particleCamera = new THREE.OrthographicCamera(
+  (-cameraSize * sizes.width) / sizes.height,
+  (cameraSize * sizes.width) / sizes.height,
+  cameraSize,
+  -cameraSize,
+  -1,
+  10
+);
 
-const controls = new OrbitControls(camera, canvas);
+viewPortCamera.position.set(0, 0, 0.1);
+viewPortCamera.lookAt(new THREE.Vector3(0, 0, 0));
+particleScene.add(viewPortCamera);
+
+const controls = new OrbitControls(viewPortCamera, canvas);
 controls.enableDamping = true;
+controls.enableRotate = false;
 
 /********************
  * Update Part
@@ -115,7 +125,7 @@ function onResize(camera, render) {
   render.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 }
 
-window.addEventListener("resize", () => onResize(camera, renderer));
+window.addEventListener("resize", () => onResize(viewPortCamera, renderer));
 
 (async () => {
   const windDataManager = new WindDataManager();
@@ -217,9 +227,9 @@ window.addEventListener("resize", () => onResize(camera, renderer));
   });
   pastScene.add(new Mesh(pastScenePlane, pastSceneMaterial));
 
-  const device = new Scene();
+  const viewPortScene = new Scene();
   const devicePlane = new PlaneGeometry((1 * sizes.width) / sizes.height, 1);
-  const deviceMaterial = new ShaderMaterial({
+  const viewPortMaterial = new ShaderMaterial({
     vertexShader: blendVertexShader,
     fragmentShader: blendFragmentShader,
     uniforms: {
@@ -227,7 +237,7 @@ window.addEventListener("resize", () => onResize(camera, renderer));
       u_previous_screen_alpha: { value: 1 },
     },
   });
-  device.add(new Mesh(devicePlane, deviceMaterial));
+  viewPortScene.add(new Mesh(devicePlane, viewPortMaterial));
 
   renderer.setSize(sizes.width, sizes.height);
 
@@ -235,20 +245,6 @@ window.addEventListener("resize", () => onResize(camera, renderer));
   let prevMoment = clock.getElapsedTime();
 
   const tick = () => {
-    if (isControlUpdated) {
-      const clearColor = new Color(0xffffff);
-      renderer.setRenderTarget(pastScreen);
-      renderer.setClearColor(clearColor, 1.0);
-      renderer.clear();
-      renderer.setRenderTarget(currentScreen);
-      renderer.setClearColor(clearColor, 1.0);
-      renderer.clear();
-      renderer.setRenderTarget(null);
-      renderer.setClearColor(clearColor, 1.0);
-      renderer.clear();
-      isControlUpdated = false;
-    }
-
     renderer.autoClear = false;
     const now = clock.getElapsedTime();
     const timeGap = now - prevMoment;
@@ -262,19 +258,27 @@ window.addEventListener("resize", () => onResize(camera, renderer));
     renderer.render(updateScene, updateCamera);
     updateMaterial.uniforms.particlePos.value = positionBuffer.texture;
 
-    // 과거 장면에 덧 씌우기
+    // Current Scene 렌더 준비
     renderer.setSize(sizes.width, sizes.height);
     pastSceneMaterial.uniforms.u_previous_screen.value = pastScreen.texture;
     pastSceneMaterial.uniforms.u_previous_screen_alpha.value = 0.95;
     renderer.setRenderTarget(currentScreen);
-    renderer.render(pastScene, camera);
-    renderer.render(particleScene, camera);
+
+    // 블러 Off 시 이전 Scene 초기화
+    if (isBlurOff) {
+      renderer.setRenderTarget(pastScreen);
+      renderer.setClearColor(WHITE, 1.0);
+      renderer.clear();
+    }
+
+    // 이전 Scene 렌더 후 현재 파티클 렌더
+    renderer.render(pastScene, particleCamera);
+    renderer.render(particleScene, particleCamera);
 
     // 화면으로 출력
     renderer.setRenderTarget(null);
-    renderer.setSize(sizes.width, sizes.height);
-    deviceMaterial.uniforms.u_previous_screen.value = currentScreen.texture;
-    renderer.render(device, camera);
+    viewPortMaterial.uniforms.u_previous_screen.value = currentScreen.texture;
+    renderer.render(viewPortScene, viewPortCamera);
 
     let tempSwap = pastPositionBuffer;
     pastPositionBuffer = positionBuffer;
@@ -288,25 +292,16 @@ window.addEventListener("resize", () => onResize(camera, renderer));
   renderer.setAnimationLoop(tick);
 })();
 
-setTimeout(() => {
-  // renderer.setAnimationLoop(null);
-  // const clearColor = new Color(0x000000);
-  // renderer.setRenderTarget(null);
-  // renderer.setClearColor(clearColor, 1.0);
-  // renderer.clear();
-}, 3000);
-
-document.addEventListener("scroll", function (e) {
-  console.log(scroll);
-});
-
-controls.addEventListener("change", () => {
+const controlEventToleranceTime = 1500; // miliseconds
+let isBlurOff = false;
+let isControlUpdated = false;
+controls.addEventListener("change", (e, t) => {
   isControlUpdated = true;
-  // const clearColor = new Color(0x000000);
-  // renderer.setRenderTarget(pastScreen);
-  // renderer.setClearColor(clearColor, 1.0);
-  // renderer.clear();
-  // renderer.setRenderTarget(currentScreen);
-  // renderer.setClearColor(clearColor, 1.0);
-  // renderer.clear();
+  isBlurOff = true;
+  setTimeout(() => {
+    if (isControlUpdated) {
+      isBlurOff = false;
+      isControlUpdated = false;
+    }
+  }, controlEventToleranceTime);
 });
