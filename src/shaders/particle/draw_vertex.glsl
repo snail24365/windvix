@@ -16,7 +16,7 @@ float linearTransformation(float maxV, float minV, float r, float g) {
 }
 
 void main () {
-    gl_PointSize = 3.0;
+    gl_PointSize = 2.0;
 
     vec4 particle = texture2D(particlePos, uv);
     

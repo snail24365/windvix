@@ -1,5 +1,11 @@
 import * as THREE from "three";
 
+var seed = 1;
+function random() {
+  var x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
+}
+
 export function generatelinearTransformation(maxV, minV, maxW, minW) {
   return (value) => minW + (maxW - minW) * ((value - minV) / (maxV - minV));
 }
@@ -60,10 +66,10 @@ export function makeRandomPosition(width, height) {
 
   for (let i = 0; i < size; i++) {
     const stride = i * 4;
-    position[stride] = Math.floor(Math.random() * 255) + 1;
-    position[stride + 1] = Math.floor(Math.random() * 255) + 1;
-    position[stride + 2] = Math.floor(Math.random() * 255) + 1;
-    position[stride + 3] = Math.floor(Math.random() * 255) + 1;
+    position[stride] = Math.floor(random() * 255) + 1;
+    position[stride + 1] = Math.floor(random() * 255) + 1;
+    position[stride + 2] = Math.floor(random() * 255) + 1;
+    position[stride + 3] = Math.floor(random() * 255) + 1;
   }
   return position;
 }

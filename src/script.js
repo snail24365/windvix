@@ -7,14 +7,17 @@ import updateVertexShader from "./shaders/particle/update_vertex.glsl";
 import updateFragmentShader from "./shaders/particle/update_fragment.glsl";
 import drawVertexShader from "./shaders/particle/draw_vertex.glsl";
 import drawFragmentShader from "./shaders/particle/draw_fragment.glsl";
+import blendVertexShader from "./shaders/particle/blend_vertex.glsl";
+import blendFragmentShader from "./shaders/particle/blend_fragment.glsl";
 
 import {
+  BoxGeometry,
+  Color,
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
   Scene,
   ShaderMaterial,
-  SphereGeometry,
   Uniform,
   Vector2,
 } from "three";
@@ -23,6 +26,8 @@ import {
   makeRandomPosition,
   transformToTextrue,
 } from "./util";
+
+let isControlUpdated = false;
 
 /* Common Global Variable */
 // const gui = new dat.GUI({ width: 340 });
@@ -33,7 +38,7 @@ const sizes = {
 };
 
 const particleInfo = {
-  _numParticle: 300000,
+  _numParticle: 200000,
 
   get gridLength() {
     return parseInt(Math.sqrt(this._numParticle));
@@ -57,14 +62,23 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 /********************
  * Draw Part
  ********************/
-const drawScene = new THREE.Scene();
+const particleScene = new THREE.Scene();
 const aspectRatio = sizes.width / sizes.height;
-const drawCamera = new THREE.PerspectiveCamera(75, aspectRatio, 0.0001, 100);
-drawCamera.position.set(0, 0, 0.7);
-drawCamera.lookAt(new THREE.Vector3(0, 0, 0));
-drawScene.add(drawCamera);
+const cameraSize = 0.5;
+const camera = new THREE.OrthographicCamera(
+  (-cameraSize * sizes.width) / sizes.height,
+  (cameraSize * sizes.width) / sizes.height,
+  cameraSize,
+  -cameraSize,
+  -1,
+  10
+);
 
-const controls = new OrbitControls(drawCamera, canvas);
+camera.position.set(0, 0, 0.1);
+camera.lookAt(new THREE.Vector3(0, 0, 0));
+particleScene.add(camera);
+
+const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 
 /********************
@@ -85,11 +99,10 @@ const positionBufferOption = [
   },
 ];
 
-const blendBufferOption = [sizes.width, sizes.height];
-
-let positionFrameBuffer1 = new THREE.WebGLRenderTarget(...positionBufferOption);
-let positionFrameBuffer2 = new THREE.WebGLRenderTarget(...positionBufferOption);
-let blendFrameBuffer = new THREE.WebGLRenderTarget(...blendBufferOption);
+let positionBuffer = new THREE.WebGLRenderTarget(...positionBufferOption);
+let pastPositionBuffer = new THREE.WebGLRenderTarget(...positionBufferOption);
+let pastScreen = new THREE.WebGLRenderTarget(sizes.width, sizes.height);
+let currentScreen = new THREE.WebGLRenderTarget(sizes.width, sizes.height);
 
 function onResize(camera, render) {
   sizes.width = window.innerWidth;
@@ -102,7 +115,7 @@ function onResize(camera, render) {
   render.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 }
 
-window.addEventListener("resize", () => onResize(drawCamera, renderer));
+window.addEventListener("resize", () => onResize(camera, renderer));
 
 (async () => {
   const windDataManager = new WindDataManager();
@@ -181,59 +194,119 @@ window.addEventListener("resize", () => onResize(drawCamera, renderer));
   const updateMesh = new THREE.Mesh(updateGeometry, updateMaterial);
   const particles = new THREE.Points(particleGeometry, particleMaterial);
   updateScene.add(updateMesh);
-  drawScene.add(particles);
+  particleScene.add(particles);
 
   renderer.setSize(particleInfo.gridLength, particleInfo.gridLength);
-  renderer.setRenderTarget(positionFrameBuffer1);
+  renderer.setRenderTarget(positionBuffer);
   renderer.render(updateScene, updateCamera);
 
-  // renderer.setRenderTarget(null);
-  // renderer.setSize(sizes.width, sizes.height);
-  particleMaterial.uniforms.particlePos.value = positionFrameBuffer1.texture;
+  particleMaterial.uniforms.particlePos.value = positionBuffer.texture;
 
   renderer.setRenderTarget(null);
   renderer.setSize(sizes.width, sizes.height);
 
-  const finalResultScene = new Scene();
-  const blendPlane = new PlaneGeometry(2, 1);
-  finalResultScene.add(
-    new Mesh(blendPlane, new MeshBasicMaterial({ color: 0xffffff }))
-  );
+  const pastScene = new Scene();
+  const pastScenePlane = new PlaneGeometry((1 * sizes.width) / sizes.height, 1);
+  const pastSceneMaterial = new ShaderMaterial({
+    vertexShader: blendVertexShader,
+    fragmentShader: blendFragmentShader,
+    uniforms: {
+      u_previous_screen: { type: "t", value: null },
+      u_previous_screen_alpha: { value: 0.95 },
+    },
+  });
+  pastScene.add(new Mesh(pastScenePlane, pastSceneMaterial));
+
+  const device = new Scene();
+  const devicePlane = new PlaneGeometry((1 * sizes.width) / sizes.height, 1);
+  const deviceMaterial = new ShaderMaterial({
+    vertexShader: blendVertexShader,
+    fragmentShader: blendFragmentShader,
+    uniforms: {
+      u_previous_screen: { type: "t", value: null },
+      u_previous_screen_alpha: { value: 1 },
+    },
+  });
+  device.add(new Mesh(devicePlane, deviceMaterial));
+
+  renderer.setSize(sizes.width, sizes.height);
 
   const clock = new THREE.Clock();
   let prevMoment = clock.getElapsedTime();
 
   const tick = () => {
+    if (isControlUpdated) {
+      const clearColor = new Color(0xffffff);
+      renderer.setRenderTarget(pastScreen);
+      renderer.setClearColor(clearColor, 1.0);
+      renderer.clear();
+      renderer.setRenderTarget(currentScreen);
+      renderer.setClearColor(clearColor, 1.0);
+      renderer.clear();
+      renderer.setRenderTarget(null);
+      renderer.setClearColor(clearColor, 1.0);
+      renderer.clear();
+      isControlUpdated = false;
+    }
+
+    renderer.autoClear = false;
     const now = clock.getElapsedTime();
     const timeGap = now - prevMoment;
     prevMoment = now;
 
-    console.log(Math.floor(now * 0.9));
-
+    // update position
     updateMaterial.uniforms.u_time.value = now;
     updateMaterial.uniforms.timeGap.value = timeGap;
     renderer.setSize(particleInfo.gridLength, particleInfo.gridLength);
-    renderer.setRenderTarget(positionFrameBuffer1);
+    renderer.setRenderTarget(positionBuffer);
     renderer.render(updateScene, updateCamera);
+    updateMaterial.uniforms.particlePos.value = positionBuffer.texture;
 
-    // 과거 화면에 덫 입힘 블렌딩 알파 적용해서
-    renderer.setRenderTarget(null); // 이거 blendBuffer? 로 아마 수정해야할듯
+    // 과거 장면에 덧 씌우기
     renderer.setSize(sizes.width, sizes.height);
-    particleMaterial.uniforms.particlePos.value = positionFrameBuffer1.texture;
-    renderer.render(drawScene, drawCamera);
-    // 블렌드 버퍼를 그 final geometry에 적용.
+    pastSceneMaterial.uniforms.u_previous_screen.value = pastScreen.texture;
+    pastSceneMaterial.uniforms.u_previous_screen_alpha.value = 0.95;
+    renderer.setRenderTarget(currentScreen);
+    renderer.render(pastScene, camera);
+    renderer.render(particleScene, camera);
 
-    // 과거화면 그려줌.
-    // renderer.setRenderTarget(blendFrameBuffer);
-    // renderer.render(drawScene, drawCamera);
+    // 화면으로 출력
+    renderer.setRenderTarget(null);
+    renderer.setSize(sizes.width, sizes.height);
+    deviceMaterial.uniforms.u_previous_screen.value = currentScreen.texture;
+    renderer.render(device, camera);
 
-    const tempSwap = positionFrameBuffer2;
-    positionFrameBuffer2 = positionFrameBuffer1;
-    positionFrameBuffer1 = tempSwap;
+    let tempSwap = pastPositionBuffer;
+    pastPositionBuffer = positionBuffer;
+    positionBuffer = tempSwap;
 
-    updateMaterial.uniforms.particlePos.value = positionFrameBuffer2.texture;
-    controls.update();
+    tempSwap = pastScreen;
+    pastScreen = currentScreen;
+    currentScreen = tempSwap;
   };
 
   renderer.setAnimationLoop(tick);
 })();
+
+setTimeout(() => {
+  // renderer.setAnimationLoop(null);
+  // const clearColor = new Color(0x000000);
+  // renderer.setRenderTarget(null);
+  // renderer.setClearColor(clearColor, 1.0);
+  // renderer.clear();
+}, 3000);
+
+document.addEventListener("scroll", function (e) {
+  console.log(scroll);
+});
+
+controls.addEventListener("change", () => {
+  isControlUpdated = true;
+  // const clearColor = new Color(0x000000);
+  // renderer.setRenderTarget(pastScreen);
+  // renderer.setClearColor(clearColor, 1.0);
+  // renderer.clear();
+  // renderer.setRenderTarget(currentScreen);
+  // renderer.setClearColor(clearColor, 1.0);
+  // renderer.clear();
+});

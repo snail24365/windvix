@@ -65,7 +65,7 @@ void main () {
     wind.y *= distortion;
 
     vec2 delta = u_speed_scale * timeGap * wind;
-    vec2 newPos = pos + delta;
+    vec2 newPos = fract(1.0 + pos + delta);
     
     float speed_t = length(wind) / maxSpeed;
 
