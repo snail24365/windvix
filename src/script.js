@@ -2,7 +2,7 @@ import "./style.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import * as dat from "lil-gui";
-import WindDataManager from "./WindDataManager";
+import WindDataStore from "./WindDataStore";
 import updateVertexShader from "./shaders/particle/update_vertex.glsl";
 import updateFragmentShader from "./shaders/particle/update_fragment.glsl";
 import drawVertexShader from "./shaders/particle/draw_vertex.glsl";
@@ -11,10 +11,8 @@ import blendVertexShader from "./shaders/particle/blend_vertex.glsl";
 import blendFragmentShader from "./shaders/particle/blend_fragment.glsl";
 
 import {
-  BoxGeometry,
   Color,
   Mesh,
-  MeshBasicMaterial,
   PlaneGeometry,
   Scene,
   ShaderMaterial,
@@ -29,16 +27,13 @@ import {
 
 const WHITE = new Color(0xffffff);
 
-/* Common Global Variable */
-// const gui = new dat.GUI({ width: 340 });
-const debugObject = {};
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
 };
 
 const particleInfo = {
-  _numParticle: 200000,
+  _numParticle: 500000,
 
   get gridLength() {
     return parseInt(Math.sqrt(this._numParticle));
@@ -64,27 +59,20 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
  ********************/
 const particleScene = new THREE.Scene();
 const aspectRatio = sizes.width / sizes.height;
-const cameraSize = 0.5;
-const viewPortCamera = new THREE.OrthographicCamera(
-  (-cameraSize * sizes.width) / sizes.height,
-  (cameraSize * sizes.width) / sizes.height,
-  cameraSize,
-  -cameraSize,
-  -1,
-  10
-);
+const cameraLength = 0.5;
 
-const particleCamera = new THREE.OrthographicCamera(
-  (-cameraSize * sizes.width) / sizes.height,
-  (cameraSize * sizes.width) / sizes.height,
-  cameraSize,
-  -cameraSize,
+const cameraOption = [
+  -cameraLength * aspectRatio,
+  cameraLength * aspectRatio,
+  cameraLength,
+  -cameraLength,
   -1,
-  10
-);
+  10,
+];
 
-viewPortCamera.position.set(0, 0, 0.1);
-viewPortCamera.lookAt(new THREE.Vector3(0, 0, 0));
+const viewPortCamera = new THREE.OrthographicCamera(...cameraOption);
+const particleCamera = new THREE.OrthographicCamera(...cameraOption);
+
 particleScene.add(viewPortCamera);
 
 const controls = new OrbitControls(viewPortCamera, canvas);
@@ -96,8 +84,6 @@ controls.enableRotate = false;
  ********************/
 const updateScene = new THREE.Scene();
 const updateCamera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, -1, 10);
-updateCamera.position.set(0, 0, 1);
-updateCamera.lookAt(new THREE.Vector3(0, 0, 0));
 updateScene.add(updateCamera);
 
 const positionBufferOption = [
@@ -128,8 +114,8 @@ function onResize(camera, render) {
 window.addEventListener("resize", () => onResize(viewPortCamera, renderer));
 
 (async () => {
-  const windDataManager = new WindDataManager();
-  await windDataManager.init();
+  const windDataManager = new WindDataStore();
+  await windDataManager.initialize();
 
   /* Position Update Part */
   const gridLength = particleInfo.gridLength;
