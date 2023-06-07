@@ -3,9 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Base</title>
+    <title>Wind Visualization</title>
   </head>
   <body>
     <canvas class="webgl"></canvas>
+    <ul class="state-display">
+      <li class="weather">
+        <p class="title"></p>
+        <div class="weather-icon-container">
+          <img class="icon" title="weather icon" alt="weather" />
+        </div>
+      </li>
+      <li class="temperature">
+        <p class="title">Temp</p>
+        <div class="value-container">
+          <p class="value"></p>
+        </div>
+      </li>
+      <li class="air-pressure">
+        <p class="title">Air</p>
+        <div class="value-container">
+          <p class="value"></p>
+        </div>
+      </li>
+      <li class="humid">
+        <p class="title">Humid</p>
+        <div class="value-container">
+          <p class="value"></p>
+        </div>
+      </li>
+    </ul>
+    <div class="hover-display">
+      <p>
+        <span>longitude : </span>
+        <span class="lon-value">-</span>
+      </p>
+      <p>
+        <span>latitude : </span>
+        <span class="lat-value">-</span>
+      </p>
+      <p>
+        <span>x-speed : </span>
+        <span class="x-speed-value">-</span>
+      </p>
+      <p>
+        <span>y-speed : </span>
+        <span class="y-speed-value">-</span>
+      </p>
+    </div>
   </body>
 </html>

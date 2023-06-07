@@ -1,4 +1,4 @@
-uniform sampler2D particlePos;
+uniform sampler2D positionBuffer;
 uniform sampler2D windVelocity;
 
 uniform float vxMax;
@@ -18,7 +18,7 @@ float linearTransformation(float maxV, float minV, float r, float g) {
 void main () {
     gl_PointSize = 1.0;
 
-    vec4 particle = texture2D(particlePos, uv);
+    vec4 particle = texture2D(positionBuffer, uv);
     
     vec2 pos = vec2(
     particle.r / 255.0 + particle.b, 

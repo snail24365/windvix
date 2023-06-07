@@ -1,4 +1,4 @@
-uniform sampler2D particlePos;
+uniform sampler2D positionBuffer;
 uniform sampler2D windVelocity;
 
 uniform float vxMax;
@@ -14,7 +14,7 @@ float getlinearTransformation(float maxV, float minV, float r, float g) {
 }
 
 void main () {
-    vec4 particle = texture2D(particlePos, v_uv);
+    vec4 particle = texture2D(positionBuffer, v_uv);
     vec4 wind = texture2D(windVelocity, v_uv);
 
     float vx = getlinearTransformation(vxMax, vxMin, wind.r, wind.g);
