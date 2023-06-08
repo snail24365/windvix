@@ -1,16 +1,6 @@
-# Three.js Journey
+# description
 
-## Setup
-Download [Node.js](https://nodejs.org/en/download/).
-Run this followed commands:
+이 프로젝트는 데모용으로 개발되었습니다.
+plane javascript로 구현했으며 데모 시연용이기 때문에
 
-``` bash
-# Install dependencies (only the first time)
-npm install
-
-# Run the local server at localhost:8080
-npm run dev
-
-# Build for production in the dist/ directory
-npm run build
-```
+유지보수는 크게 고려하지않고 절차지향적으로 구현되었습니다.
