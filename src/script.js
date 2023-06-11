@@ -310,6 +310,14 @@ window.addEventListener("resize", () => {
   );
 
   const blendScene = new Scene();
+  const finalScene = new Scene();
+
+  const finalScreen = new Mesh(
+    new PlaneGeometry(worldMapWidth, worldMapHeight),
+    new THREE.MeshBasicMaterial({ map: null })
+  );
+  finalScreen.position.set(worldMapWidth / 2, worldMapHeight / 2, 0);
+  finalScene.add(finalScreen);
 
   const blendProgram = new Mesh(
     new PlaneGeometry(worldMapWidth, worldMapHeight),
@@ -356,6 +364,7 @@ window.addEventListener("resize", () => {
   viewportPlaneMesh.position.set(worldMapWidth / 2, worldMapHeight / 2, 0);
   viewPortScene.add(viewportPlaneMesh);
   renderer.autoClear = true;
+  renderer.setClearColor(WHITE, 1.0);
 
   let prevTime = clock.getElapsedTime();
   const tick = () => {
@@ -382,30 +391,31 @@ window.addEventListener("resize", () => {
     windFlow.material.uniforms.timingSignal.value = timingSignal;
 
     // Blend
-    // renderer.setSize(worldMapWidth * 3, worldMapHeight * 3, false);
-    // renderer.setRenderTarget(currentScreen);
-    // renderer.render(mainScene, fullCamera);
+    renderer.setSize(worldMapWidth * 3, worldMapHeight * 3, false);
+    renderer.setRenderTarget(currentScreen);
+    renderer.render(mainScene, fullCamera);
 
-    // blendProgram.material.uniforms.u_current_screen.value =
-    //   currentScreen.texture;
-    // blendProgram.material.uniforms.u_previous_screen.value = pastScreen.texture;
-    // renderer.setRenderTarget(blendOutput);
-    // renderer.render(blendScene, fullCamera);
+    blendProgram.material.uniforms.u_current_screen.value =
+      currentScreen.texture;
+    blendProgram.material.uniforms.u_previous_screen.value = pastScreen.texture;
+    renderer.setRenderTarget(blendOutput);
+    renderer.render(blendScene, fullCamera);
 
-    // let tempScreenTarget = pastScreen;
-    // pastScreen = blendOutput;
-    // blendOutput = currentScreen;
-    // currentScreen = tempScreenTarget;
-
+    finalScreen.material.map = blendOutput.texture;
     renderer.setRenderTarget(null);
     renderer.setSize(windowSize.width, windowSize.height);
-    renderer.render(mainScene, mainCamera);
+    renderer.render(finalScene, mainCamera);
 
-    // if (isBlurOff) {
-    //   renderer.setRenderTarget(pastScreen);
-    //   renderer.setClearColor(WHITE, 1.0);
-    //   renderer.clear();
-    // }
+    let tempScreenTarget = pastScreen;
+    pastScreen = blendOutput;
+    blendOutput = currentScreen;
+    currentScreen = tempScreenTarget;
+
+    if (isBlurOff) {
+      renderer.setRenderTarget(pastScreen);
+      renderer.setClearColor(WHITE, 1.0);
+      renderer.clear();
+    }
 
     let tempSwap = positionOutputBuffer;
     positionOutputBuffer = positionBuffer;

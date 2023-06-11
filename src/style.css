@@ -97,6 +97,13 @@ body {
     width: 10vw !important;
     height: 10vw !important;
   }
+
+  .hover-display {
+    display: flex;
+    gap: 12px !important;
+    color: #efefef;
+    font-size: 14px !important;
+  }
 }
 
 .weather-icon-container {
@@ -117,7 +124,7 @@ body {
 .hover-display {
   position: absolute;
   bottom: 10px;
-  width: 80%;
+  width: 90%;
   max-width: 700px;
   padding: 20px;
   right: 10px;
