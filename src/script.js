@@ -80,7 +80,7 @@ const updateCamera = new THREE.OrthographicCamera(
   10
 );
 
-const sqrtNumParticle = 500;
+const sqrtNumParticle = 250;
 
 let positionBuffer = new THREE.WebGLRenderTarget(
   sqrtNumParticle,
@@ -131,6 +131,7 @@ window.addEventListener("resize", () => {
       varying vec2 v_uv;
       uniform sampler2D velocityTexture;
       uniform sampler2D particlePositionTexture;
+      uniform float deltaTime;
       uniform float time;
       uniform float worldMapWidth;
       uniform float worldMapHeight;
@@ -165,9 +166,8 @@ window.addEventListener("resize", () => {
         // todo outside of viewport 
         bool isOutside = position.x <= 0.0 || position.x >= worldMapWidth || position.y <= 0.0 || position.y >= worldMapHeight;
         bool isNeedReset = isInitPosition || isRandomReset || isSlowReset || isOutside;
-
-        float alpha = 0.05;
-        position += velocity * alpha;
+        
+        position += velocity * deltaTime * 0.6;
 
         if(isNeedReset) {
           position.x = random(v_uv + 5.23 * sin(timingSignal + 1.7) + 1.23) * worldMapWidth;
@@ -185,6 +185,7 @@ window.addEventListener("resize", () => {
         worldMapHeight: { value: worldMapHeight },
         time: { value: 0 },
         timingSignal: { value: 10 },
+        deltaTime: { value: 0 },
       },
     })
   );
@@ -232,7 +233,7 @@ window.addEventListener("resize", () => {
 
           void main() {
             v_uv = uv;
-            gl_PointSize = 2.0;
+            gl_PointSize = 3.0;
             vec4 info = texture(particlePositionTexture, v_uv);
             vec2 pos = info.xy;
             v_speed = info.z;
@@ -260,9 +261,9 @@ window.addEventListener("resize", () => {
             if(v_isReseted == 0.0) { 
               gl_FragColor = vec4(0., 0., 0., 0.);  
             }
-            else if (v_speed < 2.0 && random(timingSignal * v_uv + timingSignal) < 0.9) {
-              gl_FragColor = vec4(0., 0., 0., 0.);  
-            }
+            // else if (v_speed < 2.0 && random(timingSignal * v_uv + timingSignal) < 0.9) {
+            //   gl_FragColor = vec4(0., 0., 0., 0.);  
+            // }
             else {
               gl_FragColor = texture2D(paletteTexture, vec2(v_speed / 20., 0.0));
             }
@@ -354,9 +355,12 @@ window.addEventListener("resize", () => {
   viewPortScene.add(viewportPlaneMesh);
   renderer.autoClear = true;
 
+  let prevTime = clock.getElapsedTime();
   const tick = () => {
     const now = clock.getElapsedTime();
 
+    const deltaTime = now - prevTime;
+    prevTime = now;
     const timingSignal = Math.floor(now * 4);
 
     particlePositionUpdateProgram.material.uniforms.time.value = now;
@@ -365,6 +369,7 @@ window.addEventListener("resize", () => {
 
     particlePositionUpdateProgram.material.uniforms.timingSignal.value =
       timingSignal;
+    particlePositionUpdateProgram.material.uniforms.deltaTime.value = deltaTime;
     particlePositionUpdateProgram.material.needsUpdate = true;
 
     renderer.setRenderTarget(positionOutputBuffer);
@@ -375,30 +380,30 @@ window.addEventListener("resize", () => {
     windFlow.material.uniforms.timingSignal.value = timingSignal;
 
     // Blend
-    renderer.setSize(worldMapWidth * 3, worldMapHeight * 3, false);
-    renderer.setRenderTarget(currentScreen);
-    renderer.render(mainScene, fullCamera);
+    // renderer.setSize(worldMapWidth * 3, worldMapHeight * 3, false);
+    // renderer.setRenderTarget(currentScreen);
+    // renderer.render(mainScene, fullCamera);
 
-    blendProgram.material.uniforms.u_current_screen.value =
-      currentScreen.texture;
-    blendProgram.material.uniforms.u_previous_screen.value = pastScreen.texture;
-    renderer.setRenderTarget(blendOutput);
-    renderer.render(blendScene, fullCamera);
+    // blendProgram.material.uniforms.u_current_screen.value =
+    //   currentScreen.texture;
+    // blendProgram.material.uniforms.u_previous_screen.value = pastScreen.texture;
+    // renderer.setRenderTarget(blendOutput);
+    // renderer.render(blendScene, fullCamera);
 
-    let tempScreenTarget = pastScreen;
-    pastScreen = blendOutput;
-    blendOutput = currentScreen;
-    currentScreen = tempScreenTarget;
+    // let tempScreenTarget = pastScreen;
+    // pastScreen = blendOutput;
+    // blendOutput = currentScreen;
+    // currentScreen = tempScreenTarget;
 
     renderer.setRenderTarget(null);
     renderer.setSize(windowSize.width, windowSize.height);
-    renderer.render(blendScene, mainCamera);
+    renderer.render(mainScene, mainCamera);
 
-    if (isBlurOff) {
-      renderer.setRenderTarget(pastScreen);
-      renderer.setClearColor(WHITE, 1.0);
-      renderer.clear();
-    }
+    // if (isBlurOff) {
+    //   renderer.setRenderTarget(pastScreen);
+    //   renderer.setClearColor(WHITE, 1.0);
+    //   renderer.clear();
+    // }
 
     let tempSwap = positionOutputBuffer;
     positionOutputBuffer = positionBuffer;

@@ -72,11 +72,32 @@ body {
 .state-display .value {
   font-size: 1.2rem;
 }
-/* @media only screen and (max-width: 820px) {
-  .state-display {
-
+@media only screen and (max-width: 820px) {
+  :root {
+    font-size: 12px;
   }
-} */
+  .state-display > li {
+    font-size: 12px;
+    padding: 5px 5px;
+  }
+
+  .state-display p {
+    font-size: 27px !important;
+  }
+
+  .state-display .value-container .value {
+    font-size: 20px !important;
+  }
+
+  .hover-display {
+    padding: 5px 10px !important;
+  }
+
+  .weather-icon-container img {
+    width: 10vw !important;
+    height: 10vw !important;
+  }
+}
 
 .weather-icon-container {
   text-align: right;
