@@ -23,6 +23,8 @@ const windowSize = {
   height: window.innerHeight,
 };
 
+console.log(devicePixelRatio);
+
 const canvas = document.querySelector("canvas.webgl");
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
@@ -30,7 +32,7 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
   alpha: true,
 });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(1);
 
 /********************
  * Draw Part
