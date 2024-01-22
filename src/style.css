@@ -37,7 +37,7 @@ body {
 }
 
 .state-display > li {
-  background-color: #bcaaa4;
+  background-color: #a1a19e8a;
   box-shadow: 1px 1px 15px silver;
   opacity: 0.95;
   border-radius: 10px;
@@ -46,22 +46,29 @@ body {
   min-height: 10rem;
   padding: 10px 20px;
   color: #eeeeee;
+  transition-duration: 0.4s;
+}
+
+.state-display > li:hover {
+  opacity: 1;
+  background-color: #a1a19e;
+
 }
 
 .state-display > li:first-child {
-  border-left: 5px solid #b31312;
+  border-left: 5px solid #ff000049;
 }
 
 .state-display > li:nth-child(2) {
-  border-left: 5px solid #2b2a4c;
+  border-left: 5px solid #ff620049;
 }
 
 .state-display > li:nth-child(3) {
-  border-left: 5px solid #ea906c;
+  border-left: 5px solid #00a30349;
 }
 
 .state-display > li:nth-child(4) {
-  border-left: 5px solid #116a7b;
+  border-left: 5px solid #4800ff49;
 }
 
 .state-display .title {
@@ -130,8 +137,13 @@ body {
   right: 10px;
   min-height: 60px;
   border-radius: 8px;
-  background-color: #a1887f;
+  background-color: #a1a19e8a;
   box-shadow: 1px 1px 15px silver;
+  transition-duration: 0.4s;
+}
+
+.hover-display:hover {
+  background-color: #a1a19e;
 }
 
 .hover-display {

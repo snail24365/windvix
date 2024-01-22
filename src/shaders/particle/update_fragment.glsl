@@ -35,7 +35,7 @@ void main() {
     bool isOutside = position.x <= 0.0 || position.x >= worldMapWidth || position.y <= 0.0 || position.y >= worldMapHeight;
 
 
-    float alpha = 0.01;
+    float alpha = 0.03;
     position += velocity * alpha;
 
     //  || isRandomReset || isSlowReset || isOutside
